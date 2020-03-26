@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -277,7 +278,26 @@ func (ksm *kubeSubnetManager) AcquireLease(ctx context.Context, attrs *subnet.Le
 
 		_, err = ksm.client.CoreV1().Nodes().Patch(ksm.nodeName, types.StrategicMergePatchType, patchBytes, "status")
 		if err != nil {
-			return nil, err
+			glog.Warningf("Fail to patch node %s to lease: %v, retry it", ksm.nodeName, err)
+			go func() {
+				for {
+					time.Sleep(time.Second)
+					cachedNode, err = ksm.nodeStore.Get(ksm.nodeName)
+					if err != nil {
+						if k8serrors.IsNotFound(err) {
+							glog.Infof("Node %s not found. Stop patch", ksm.nodeName)
+							break
+						}
+						glog.Errorf("Fail to get node %s %v, retry it", ksm.nodeName, err)
+						continue
+					}
+					_, err = ksm.client.CoreV1().Nodes().Patch(ksm.nodeName, types.StrategicMergePatchType, patchBytes, "status")
+					if err == nil {
+						break
+					}
+					glog.Warningf("Fail to patch node %s to lease: %v, retry it", ksm.nodeName, err)
+				}
+			}()
 		}
 	}
 	err = ksm.setNodeNetworkUnavailableFalse()

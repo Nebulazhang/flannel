@@ -99,7 +99,7 @@ type CmdLineOpts struct {
 	iptablesResyncSeconds  int
 	iptablesForwardRules   bool
 	netConfPath            string
-	mac                    string
+	macPath                string
 }
 
 var (
@@ -133,7 +133,7 @@ func init() {
 	flannelFlags.IntVar(&opts.iptablesResyncSeconds, "iptables-resync", 5, "resync period for iptables rules, in seconds")
 	flannelFlags.BoolVar(&opts.iptablesForwardRules, "iptables-forward-rules", true, "add default accept rules to FORWARD chain in iptables")
 	flannelFlags.StringVar(&opts.netConfPath, "net-config-path", "/etc/kube-flannel/net-conf.json", "path to the network configuration file")
-	flannelFlags.StringVar(&opts.mac, "mac", "", "Mac address for vxlan backend")
+	flannelFlags.StringVar(&opts.macPath, "mac-path", "", "Mac address for vxlan backend")
 
 	// glog will log to tmp files by default. override so all entries
 	// can flow into journald (if running under systemd)
@@ -278,9 +278,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(opts.mac) > 0 {
-		log.Infof("Hardware addr %s", opts.mac)
-		config.HardwareAddr = opts.mac
+	if len(opts.macPath) > 0 {
+		log.Infof("Hardware addr path %s", opts.macPath)
+		config.HardwareAddrPath = opts.macPath
 	}
 
 	// Create a backend manager then use it to create the backend and register the network with it.

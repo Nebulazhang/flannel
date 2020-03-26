@@ -19,6 +19,7 @@ package vxlan
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"syscall"
 
@@ -29,14 +30,14 @@ import (
 )
 
 type vxlanDeviceAttrs struct {
-	vni          uint32
-	name         string
-	vtepIndex    int
-	vtepAddr     net.IP
-	vtepPort     int
-	gbp          bool
-	learning     bool
-	hardwareAddr string
+	vni              uint32
+	name             string
+	vtepIndex        int
+	vtepAddr         net.IP
+	vtepPort         int
+	gbp              bool
+	learning         bool
+	hardwareAddrPath string
 }
 
 type vxlanDevice struct {
@@ -57,18 +58,35 @@ func newVXLANDevice(devAttrs *vxlanDeviceAttrs) (*vxlanDevice, error) {
 		GBP:          devAttrs.gbp,
 	}
 
-	if len(devAttrs.hardwareAddr) > 0 {
-		hw, err := net.ParseMAC(devAttrs.hardwareAddr)
+	// Set hardware address
+	if len(devAttrs.hardwareAddrPath) > 0 {
+		log.Infof("Hardware addr path is %s", devAttrs.hardwareAddrPath)
+		data, err := ioutil.ReadFile(devAttrs.hardwareAddrPath)
 		if err != nil {
-			log.Errorf("Parse mac %s error %v", devAttrs.hardwareAddr, err)
-		} else {
-			link.LinkAttrs.HardwareAddr = hw
+			log.Errorf("Read vxlan hardware address error %v", err)
+		} else if len(data) != 0 {
+			hardwareAddrStr := string(data)
+			hw, err := net.ParseMAC(hardwareAddrStr)
+			if err != nil {
+				log.Errorf("Parse mac %s error %v", hardwareAddrStr, err)
+			} else {
+				link.LinkAttrs.HardwareAddr = hw
+			}
 		}
 	}
 
 	link, err := ensureLink(link)
 	if err != nil {
 		return nil, err
+	}
+
+	// Save hardware address
+	if len(devAttrs.hardwareAddrPath) > 0 {
+		log.Infof("Save hardware addr %s into %s", link.LinkAttrs.HardwareAddr, devAttrs.hardwareAddrPath)
+		err := ioutil.WriteFile(devAttrs.hardwareAddrPath, []byte(link.LinkAttrs.HardwareAddr.String()), 0777)
+		if err != nil {
+			log.Errorf("Save hardware addr err %s, %s, %v", link.LinkAttrs.HardwareAddr, devAttrs.hardwareAddrPath, err)
+		}
 	}
 	return &vxlanDevice{
 		link: link,

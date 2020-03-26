@@ -15,7 +15,6 @@
 package subnet
 
 import (
-	"encoding/json"
 	"time"
 
 	log "github.com/golang/glog"
@@ -48,12 +47,6 @@ func WatchLeases(ctx context.Context, sm Manager, ownLease *Lease, receiver chan
 		}
 
 		cursor = res.Cursor
-		if len(res.Events) == 0 {
-			log.Info("Test receive no event")
-		}
-		b, _ := json.Marshal(res)
-		log.Infof("Test res %s", b)
-
 		var batch []Event
 
 		if len(res.Events) > 0 {
@@ -63,7 +56,6 @@ func WatchLeases(ctx context.Context, sm Manager, ownLease *Lease, receiver chan
 		}
 
 		if len(batch) > 0 {
-			log.Infof("Test %d", len(batch))
 			receiver <- batch
 		}
 	}
