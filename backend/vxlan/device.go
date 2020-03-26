@@ -58,6 +58,11 @@ func newVXLANDevice(devAttrs *vxlanDeviceAttrs) (*vxlanDevice, error) {
 		GBP:          devAttrs.gbp,
 	}
 
+	link, err := ensureLink(link)
+	if err != nil {
+		return nil, err
+	}
+
 	// Set hardware address
 	if len(devAttrs.hardwareAddrPath) > 0 {
 		log.Infof("Hardware addr path is %s", devAttrs.hardwareAddrPath)
@@ -66,18 +71,18 @@ func newVXLANDevice(devAttrs *vxlanDeviceAttrs) (*vxlanDevice, error) {
 			log.Errorf("Read vxlan hardware address error %v", err)
 		} else if len(data) != 0 {
 			hardwareAddrStr := string(data)
+			log.Infof("Hardware addr is %s", hardwareAddrStr)
 			hw, err := net.ParseMAC(hardwareAddrStr)
 			if err != nil {
 				log.Errorf("Parse mac %s error %v", hardwareAddrStr, err)
 			} else {
 				link.LinkAttrs.HardwareAddr = hw
+				link, err = ensureSetHardwareAddr(link)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-	}
-
-	link, err := ensureLink(link)
-	if err != nil {
-		return nil, err
 	}
 
 	// Save hardware address
@@ -91,6 +96,14 @@ func newVXLANDevice(devAttrs *vxlanDeviceAttrs) (*vxlanDevice, error) {
 	return &vxlanDevice{
 		link: link,
 	}, nil
+}
+
+func ensureSetHardwareAddr(vxlan *netlink.Vxlan) (*netlink.Vxlan, error) {
+	err := netlink.LinkSetHardwareAddr(vxlan, vxlan.HardwareAddr)
+	if err != nil {
+		return nil, err
+	}
+	return vxlan, nil
 }
 
 func ensureLink(vxlan *netlink.Vxlan) (*netlink.Vxlan, error) {
