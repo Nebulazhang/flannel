@@ -130,6 +130,10 @@ func (be *VXLANBackend) RegisterNetwork(ctx context.Context, wg sync.WaitGroup, 
 		learning:  cfg.Learning,
 	}
 
+	if len(config.HardwareAddr) > 0 {
+		devAttrs.hardwareAddr = config.HardwareAddr
+	}
+
 	dev, err := newVXLANDevice(&devAttrs)
 	if err != nil {
 		return nil, err

@@ -23,12 +23,13 @@ import (
 )
 
 type Config struct {
-	Network     ip.IP4Net
-	SubnetMin   ip.IP4
-	SubnetMax   ip.IP4
-	SubnetLen   uint
-	BackendType string          `json:"-"`
-	Backend     json.RawMessage `json:",omitempty"`
+	Network      ip.IP4Net
+	SubnetMin    ip.IP4
+	SubnetMax    ip.IP4
+	SubnetLen    uint
+	BackendType  string          `json:"-"`
+	Backend      json.RawMessage `json:",omitempty"`
+	HardwareAddr string
 }
 
 func parseBackendType(be json.RawMessage) (string, error) {

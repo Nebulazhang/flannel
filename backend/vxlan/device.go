@@ -29,13 +29,14 @@ import (
 )
 
 type vxlanDeviceAttrs struct {
-	vni       uint32
-	name      string
-	vtepIndex int
-	vtepAddr  net.IP
-	vtepPort  int
-	gbp       bool
-	learning  bool
+	vni          uint32
+	name         string
+	vtepIndex    int
+	vtepAddr     net.IP
+	vtepPort     int
+	gbp          bool
+	learning     bool
+	hardwareAddr string
 }
 
 type vxlanDevice struct {
@@ -54,6 +55,15 @@ func newVXLANDevice(devAttrs *vxlanDeviceAttrs) (*vxlanDevice, error) {
 		Port:         devAttrs.vtepPort,
 		Learning:     devAttrs.learning,
 		GBP:          devAttrs.gbp,
+	}
+
+	if len(devAttrs.hardwareAddr) > 0 {
+		hw, err := net.ParseMAC(devAttrs.hardwareAddr)
+		if err != nil {
+			log.Errorf("Parse mac %s error %v", devAttrs.hardwareAddr, err)
+		} else {
+			link.LinkAttrs.HardwareAddr = hw
+		}
 	}
 
 	link, err := ensureLink(link)
